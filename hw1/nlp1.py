@@ -43,6 +43,3 @@ cleanedParagraphs = list(map((lambda x: clean(x.text_content())), paragraphsRaw)
 # Take only the non-empty paragraphs after cleaning
 paragraphs = list(filter((lambda x: len(x) > 0), cleanedParagraphs))
 
-for p in paragraphs:
-    print(p)
-
