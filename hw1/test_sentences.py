@@ -36,13 +36,17 @@ class TestSentences(TestCase):
 
     def test_splitToSentencesHoursQuotes(self):
         self.assertEqual(
-            splitToSentences('What is the time? he said: "The time is 13:30." I answered: "Are you sure?"'),
-            ['What is the time?', ' he said:', ' "The time is 13:30."', ' I answered:', ' "Are you sure?"'])
+            splitToSentences('What is the time? he said: "The time is 13:30". I answered: "Are you sure?".'),
+            ['What is the time?', ' he said:', ' "The time is 13:30".', ' I answered:', ' "Are you sure?".'])
 
-    def test_splitToSentencesStartWithQuotes(self):
+    def test_splitToSentencesWithQuestionBeforeQuoteEnd(self):
         self.assertEqual(
-            splitToSentences('"What is the time?" he said.'),
-            ['"What is the time?"', ' he said.'])
+            splitToSentences('He said: "What is the time?"'),
+            ['He said:', ' "What is the time?"'])
+
+    def test_splitToSentencesDotBeforeQuotes(self):
+        self.assertEqual(splitToSentences('He said: "Are you sure?" and I disagreed'),
+                         ['He said:', ' "Are you sure?" and I disagreed'])
 
     def test_splitToSentencesHebrewQuotes(self):
         self.assertEqual(splitToSentences('כה הוא אמר: "שלום. מה שלומך?"'),
@@ -59,3 +63,6 @@ class TestSentences(TestCase):
     def test_splitToSentencesAbbreviations(self):
         self.assertEqual(splitToSentences('הוא אמר: "ק"מ זה חשוב". "מסכים."'),
                          ['הוא אמר:', ' "ק"מ זה חשוב".', ' "מסכים."'])
+
+    def test_splitToSentencesIdion(self):
+        self.assertEqual(splitToSentences('הוצגו "מעגלי ההשפעה" של העבודות'), ['הוצגו "מעגלי ההשפעה" של העבודות'])

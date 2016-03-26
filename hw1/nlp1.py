@@ -15,6 +15,8 @@ def clean(p):
     return noDuplicateSpaces.strip()
 
 # Get the web page source html, as a string
+# original article: http://www.ynet.co.il/articles/0,7340,L-4684564,00.html
+# Pi article: http://www.ynet.co.il/articles/0,7340,L-4636763,00.html
 req = requests.get('http://www.ynet.co.il/articles/0,7340,L-4636763,00.html')
 htmlStr = req.text
 

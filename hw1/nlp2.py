@@ -4,6 +4,7 @@
 #  This is so that it will work for hebrew too, no matter how hebrew and numbers are sequenced together.
 # Dilemma: Should we split to sentences inside quotes?
 # We decided to do so.
+# Also, we decided not to split sentences after a dash '-', as usually they indicate elaboration, not new sentences.
 def isEndOfSentence(inQuotes, before, current, after):
     # If the next char is terminal, then it's not the end of a sentence:
     #  if the current is not terminal, then it's not the end anyway,
@@ -15,12 +16,13 @@ def isEndOfSentence(inQuotes, before, current, after):
     # We don't need to check with @isQuotationQuote because we wouldn't break the sentence in either case.
     elif inQuotes and after == '"':
         return False
-    # If it's a closing quote, then break here, but if it's followed by a comma, break after the comma.
-    elif inQuotes and isQuotationQuote(before, current, after) and after != ',':
-        return True
     # If it's an abbreviation, we won't have a comma after the '"',
     # So no need to check with @isQuotationQuote.
-    elif not inQuotes and before == '"' and current == ',':
+    # Also, we only break to a new line if it's followed by a comma or a terminal char such as a dot.
+    # This is so that we won't make idioms go on a new line.
+    # Also, we decided not to go to a new line if we have a terminal char just before the end of quotes,
+    # such as: 'He said: "Are you sure?" and I disagreed'.
+    elif not inQuotes and before == '"' and (current == ',' or isTerminalChar(current)):
         return True
     elif isTerminalChar(current):
         # Don't break sentence on decimal points and on times.
@@ -145,6 +147,7 @@ def toSentences(paragraphs):
 
 from hw1.nlp1 import *
 
-for sentence in toSentences(paragraphs):
-   print(sentence)
+sentences = toSentences(paragraphs)
+# for sentence in sentences:
+#    print(sentence)
 
