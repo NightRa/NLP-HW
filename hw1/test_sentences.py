@@ -55,3 +55,7 @@ class TestSentences(TestCase):
     def test_splitToSentencesCommaAfterQuotes(self):
         self.assertEqual(splitToSentences('He said: "Pi is tasty", but he did not understand...'),
                          ["He said:", ' "Pi is tasty",', ' but he did not understand...'])
+
+    def test_splitToSentencesAbbreviations(self):
+        self.assertEqual(splitToSentences('הוא אמר: "ק"מ זה חשוב". "מסכים."'),
+                         ['הוא אמר:', ' "ק"מ זה חשוב".', ' "מסכים."'])

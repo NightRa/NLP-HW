@@ -12,11 +12,14 @@ def isEndOfSentence(inQuotes, before, current, after):
     if isTerminalChar(after):
         return False
     # If it's a sentence that ends right before the end of the quote, cut the sentence after the quote.
+    # We don't need to check with @isQuotationQuote because we wouldn't break the sentence in either case.
     elif inQuotes and after == '"':
         return False
     # If it's a closing quote, then break here, but if it's followed by a comma, break after the comma.
-    elif inQuotes and current == '"' and after != ',':
+    elif inQuotes and isQuotationQuote(before, current, after) and after != ',':
         return True
+    # If it's an abbreviation, we won't have a comma after the '"',
+    # So no need to check with @isQuotationQuote.
     elif not inQuotes and before == '"' and current == ',':
         return True
     elif isTerminalChar(current):
@@ -27,6 +30,10 @@ def isEndOfSentence(inQuotes, before, current, after):
             return True
     else:
         return False
+
+# A function to check whether the current character is a quotation opening/closing, ignoring abbreviations such as ק"מ.
+def isQuotationQuote(before, current, after):
+    return current == '"' and (not before.isalpha() or not after.isalpha())
 
 
 def isTerminalChar(c):
@@ -73,7 +80,7 @@ def splitToSentences(paragraph):
             prefix = prefix + before
             str = current + after + rest
 
-        if current == '"':
+        if isQuotationQuote(before, current, after):
             inQuotes = not inQuotes
     if prefix + str != "":
         sentences.append(prefix + str)
