@@ -1,3 +1,7 @@
+# Authors:
+#   Ilan Godik       - 316315332
+#   Charlie Mubariky - 316278118
+
 import requests
 from lxml import html
 from lxml import etree
@@ -60,8 +64,6 @@ def clean(p):
 
 # Determine whether the current character indicates the end of a sentence.
 # Given the surrounding characters, (that may not exist, if at the start/end of the string)
-# Important property: isEndOfSentence is symmetric: can switch @before and @after, and get the same result.
-#  This is so that it will work for hebrew too, no matter how hebrew and numbers are sequenced together.
 # Dilemma: Should we split to sentences inside quotes?
 # We decided to do so.
 # Also, we decided not to split sentences after a dash '-', as usually they indicate elaboration, not new sentences.
@@ -408,6 +410,9 @@ Result: True
 
 url = sys.argv[1]
 outputFolder = sys.argv[2]
+
+if not os.path.exists(outputFolder):
+    os.makedirs(outputFolder)
 
 textParagraphs = getYnetText(url)
 sentences = toSentences(textParagraphs)
