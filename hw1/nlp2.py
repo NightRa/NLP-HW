@@ -143,11 +143,3 @@ def toSentences(paragraphs):
         res.extend(splitToSentences(p))
     # Sentences shouldn't start with a space - an artifact of splitting right after a dot.
     return map((lambda sentence: sentence.strip()), res)
-
-
-from hw1.nlp1 import *
-
-sentences = toSentences(paragraphs)
-# for sentence in sentences:
-#    print(sentence)
-

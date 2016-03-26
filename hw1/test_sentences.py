@@ -65,4 +65,5 @@ class TestSentences(TestCase):
                          ['הוא אמר:', ' "ק"מ זה חשוב".', ' "מסכים."'])
 
     def test_splitToSentencesIdion(self):
-        self.assertEqual(splitToSentences('הוצגו "מעגלי ההשפעה" של העבודות'), ['הוצגו "מעגלי ההשפעה" של העבודות'])
+        self.assertEqual(splitToSentences('הוצגו "מעגלי ההשפעה" של העבודות'),
+                         ['הוצגו "מעגלי ההשפעה" של העבודות'])

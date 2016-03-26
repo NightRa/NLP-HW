@@ -75,16 +75,3 @@ def alwaysToken(c):
 def tokenizeAllSentences(sentences):
     # tokenize each sentence and separate tokens by a space
     return map((lambda sentence: " ".join(tokenize(sentence))), sentences)
-
-
-# Hello ...
-# input: string
-# outputs: tokens
-# def tokenize(sentence):
-
-
-from hw1.nlp2 import sentences
-tokenized = tokenizeAllSentences(sentences)
-
-for line in tokenized:
-    print(line)
