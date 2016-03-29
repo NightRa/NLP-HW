@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Authors:
 #   Ilan Godik       - 316315332
 #   Charlie Mubariky - 316278118
