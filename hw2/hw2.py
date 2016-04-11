@@ -19,7 +19,7 @@ def flatMap(list, f):
 def window(list, n):
     return [tuple(list[i:i + n]) for i in range(len(list) - n + 1)]
 
-# tokens: (lines: [String]) -> (tokens: [String])
+# n_grams: (lines: [String]) -> [(w1, w2, ..., wn)]
 def n_grams(sentences, n):
     def sentence_grams(sentence):
         tokens = sentence.split(' ')
@@ -31,15 +31,15 @@ def get_unigrams(sentences):
     # unpack the tuple of length 1
     return [t for (t,) in n_grams(sentences, 1)]
 
-# pairsFromSentences :: [String] -> [(String, String)]
+# get_bigrams: [String] -> [(String, String)]
 def get_bigrams(sentences):
     return n_grams(sentences, 2)
 
-# trigrams: [String] -> [(String, String, String)]
+# get_trigrams: [String] -> [(String, String, String)]
 def get_trigrams(sentences):
     return n_grams(sentences, 3)
 
-# countFrequencies: [(String, String)] -> Map (String, String) -> Int
+# count_frequencies: [(String, String)] -> Map (String, String) -> Int
 def count_frequencies(bigrams):
     # foldMap (Map(_ -> 1))
     counts = {}
