@@ -1,5 +1,3 @@
-from hw1.nlp2 import *
-from hw1.nlp3 import *
 import re
 
 import codecs
@@ -11,46 +9,35 @@ with codecs.open(file, 'r', 'utf-8') as f:
 
 sentences = re.sub(r"(\r\n)+|\n+|\xa0|\t", "\n", text).split("\n")
 
-# tokens: (lines: [String]) -> (tokens: [String])
-def get_tokens(sentences):
-    # sentences.flatMap(_.split(' '))
-    tokens_out = []
-    for sentence in sentences:
-        tokens_out.extend(sentence.split(' '))
-    return tokens_out
+def flatMap(list, f):
+    list_out = []
+    for e in list:
+        list_out.extend(f(e))
+    return list_out
 
-# pairs :: String -> [(String, String)]
-def get_pairs(sentence):
-    # sentence.window(2)
-    tokens = sentence.split(' ')
-    pairs_out = []
-    for i in range(0, len(tokens) - 1):
-        pairs_out.append((tokens[i], tokens[i + 1]))
-    return pairs_out
+# window: [A] -> [(a1, a2, ..., an)]
+def window(list, n):
+    return [tuple(list[i:i + n]) for i in range(len(list) - n + 1)]
+
+# tokens: (lines: [String]) -> (tokens: [String])
+def n_grams(sentences, n):
+    def sentence_grams(sentence):
+        tokens = sentence.split(' ')
+        return window(tokens, n)
+    return flatMap(sentences, sentence_grams)
+
+# get_unigrams: [Sentence] -> [Token = String]
+def get_unigrams(sentences):
+    # unpack the tuple of length 1
+    return [t for (t,) in n_grams(sentences, 1)]
 
 # pairsFromSentences :: [String] -> [(String, String)]
 def get_bigrams(sentences):
-    # sentences.flatMap(pairs)
-    pairs_out = []
-    for sentence in sentences:
-        pairs_out.extend(get_pairs(sentence))
-    return pairs_out
-
-def get_triples(sentence):
-    # sentence.window(3)
-    tokens = sentence.split(' ')
-    pairs_out = []
-    for i in range(0, len(tokens) - 1):
-        pairs_out.append((tokens[i], tokens[i + 1]))
-    return pairs_out
+    return n_grams(sentences, 2)
 
 # trigrams: [String] -> [(String, String, String)]
 def get_trigrams(sentences):
-    # sentences.flatMap(triples)
-    triples_out = []
-    for sentence in sentences:
-        triples_out.extend(get_triples(sentence))
-    return triples_out
+    return n_grams(sentences, 3)
 
 # countFrequencies: [(String, String)] -> Map (String, String) -> Int
 def count_frequencies(bigrams):
@@ -64,7 +51,7 @@ def count_frequencies(bigrams):
     return counts
 
 def raw_frequency(sentences):
-    tokens = get_tokens(sentences)
+    tokens = get_unigrams(sentences)
     num_tokens = len(tokens)
     bigrams = get_bigrams(sentences)
     frequencies = count_frequencies(bigrams)
