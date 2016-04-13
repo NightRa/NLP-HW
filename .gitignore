@@ -1,6 +1,6 @@
 .idea/
-out1/
-out2/
+out*/
+*.zip
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

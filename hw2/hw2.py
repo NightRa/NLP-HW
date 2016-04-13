@@ -1,8 +1,8 @@
 import re
-
 import codecs
+import math
 
-file = 'datasets/devset/childes-tokenized.txt'
+file = 'hw2/datasets/devset/childes-tokenized.txt'
 
 with codecs.open(file, 'r', 'utf-8') as f:
     text = f.read()
@@ -61,19 +61,66 @@ def count_probabilities(elements, total):
     # frequencies.map(normalize)
     return {k: normalize(v) for k, v in frequencies.items()}
 
-
+# raw_frequency: [String] -> Map[(String, String), Double]
 def raw_frequency(sentences):
     tokens = get_unigrams(sentences)
     num_tokens = len(tokens)
     bigrams = get_bigrams(sentences)
     return count_probabilities(bigrams, num_tokens)
 
-# frequencies: Map[(String, String), Double]
-frequencies = raw_frequency(sentences)
+def bigram_pmi(sentences):
+    tokens = get_unigrams(sentences)
+    unigram_frequencies = count_probabilities(tokens, len(tokens))
+    bigrams = get_bigrams(sentences)
+    bigram_frequencies = count_probabilities(bigrams, len(bigrams))
+    def pmi(pxy, px, py):
+        return math.log(pxy / (px * py), 2)
+
+    return {(x, y): pmi(pxy, unigram_frequencies[x], unigram_frequencies[y])
+                    for (x, y), pxy in bigram_frequencies.items()}
+
+# trigram_pmi: [String], (pmi_f: (unigrams_f, bigrams_f, trigrams_f, trigram) -> double)) -> double
+def trigram_pmi(sentences, pmi_f):
+    unigrams = get_unigrams(sentences)
+    unigrams_f = count_probabilities(unigrams, len(unigrams))
+    bigrams = get_bigrams(sentences)
+    bigrams_f = count_probabilities(bigrams, len(bigrams))
+    trigrams = get_trigrams(sentences)
+    trigrams_f = count_probabilities(trigrams, len(trigrams))
+    return {trigram: math.log(pmi_f(unigrams_f, bigrams_f, trigrams_f, trigram), 2)
+                        for trigram in trigrams}
+
+def trigram_pmi_a(sentences):
+    def pmi_a(unigrams_f, bigrams_f, trigrams_f, trigram):
+        x, y, z = trigram
+        return trigrams_f[trigram] / (unigrams_f[x] * unigrams_f[y] * unigrams_f[z])
+    return trigram_pmi(sentences, pmi_a)
+
+def trigram_pmi_b(sentences):
+    def pmi_b(unigrams_f, bigrams_f, trigrams_f, trigram):
+        x, y, z = trigram
+        return trigrams_f[trigram] / (bigrams_f[(x, y)] * bigrams_f[(y, z)])
+    return trigram_pmi(sentences, pmi_b)
+
+def trigram_pmi_c(sentences):
+    def pmi_c(unigrams_f, bigrams_f, trigrams_f, trigram):
+        x, y, z = trigram
+        return trigrams_f[trigram] / (unigrams_f[x] * unigrams_f[y] * bigrams_f[(x, y)] * bigrams_f[(y, z)])
+    return trigram_pmi(sentences, pmi_c)
+
+# top: k: Int, Map[A, B Ordered] -> List[(A, B)] Sorted on B, with only top k elements.
+def top(k, scored):
+    return sorted(scored.items(), key=(lambda pair: pair[1]), reverse=True)[:k]
+                                                    # ^ on value
+
+# bigram_pmis: Map[(String, String), Double]
+bigram_pmis = bigram_pmi(sentences)
 
 # sorted_frequencies: List[((String, String), Double)]
-sorted_frequencies = sorted(frequencies.items(), key=(lambda pair: pair[1]), reverse=True)
-                                                        # ^ freq
-for (bigram, freq) in sorted_frequencies:
+sorted_frequencies = top(100, bigram_pmis)
+
+for (bigram, pmi) in sorted_frequencies:
   w1, w2 = bigram
-  print(w1, w2, '=', "%.3f" % (freq * 1000))
+  print(w1, w2, '=', "%.3f" % (pmi * 1000))
+
+
