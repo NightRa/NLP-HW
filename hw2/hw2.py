@@ -1,13 +1,7 @@
 import re
 import codecs
 import math
-
-file = 'hw2/datasets/devset/wikipedia-tokenized.txt'
-
-with codecs.open(file, 'r', 'utf-8') as f:
-    text = f.read()
-
-sentences = re.sub(r"(\r\n)+|\n+|\xa0|\t", "\n", text).split("\n")
+import os
 
 # flatMap: [a], (a -> [b]) -> [b]
 def flatMap(list, f):
@@ -82,15 +76,16 @@ def bigram_pmi(sentences):
     return {(x, y): pmi(pxy, unigram_frequencies[x], unigram_frequencies[y])
                     for (x, y), pxy in bigram_frequencies.items()}
 
-
-def bigram_pmi_filtered(sentences):
+# bigram_pmi_filtered: k:Int, [String] -> Map[Bigram, PMI], s.t. each bigram appears at least k times in the corpus.
+def bigram_pmi_filtered(sentences, k):
     bigram_pmis = bigram_pmi(sentences)
     bigrams = get_bigrams(sentences)
     bigram_freqs = count_frequencies(bigrams)
-    return map_filter_keys(bigram_pmis, lambda bigram: bigram_freqs[bigram] > 20)
+    return map_filter_keys(bigram_pmis, lambda bigram: bigram_freqs[bigram] > k)
 
-# trigram_pmi: [String], (pmi_f: (unigrams_f, bigrams_f, trigrams_f, trigram) -> double)) -> double
-def trigram_pmi(sentences, pmi_f):
+# trigram_pmi: [String], (pmi_f: (unigrams_p, bigrams_p, trigrams_p, trigram) -> double)), k: Int -> Map[Trigram, PMI],
+# s.t. each trigram appears at least @k times in the corpus.
+def trigram_pmi(sentences, pmi_f, k):
     unigrams = get_unigrams(sentences)
     unigrams_p = count_probabilities(unigrams, len(unigrams))
     bigrams = get_bigrams(sentences)
@@ -100,33 +95,47 @@ def trigram_pmi(sentences, pmi_f):
     trigrams_f = count_frequencies(trigrams)
     trigram_pmis = {trigram: math.log(pmi_f(unigrams_p, bigrams_p, trigrams_p, trigram), 2)
                         for trigram in trigrams}
-    return map_filter_keys(trigram_pmis, lambda trigram: trigrams_f[trigram] > 20)
+    return map_filter_keys(trigram_pmis, lambda trigram: trigrams_f[trigram] > k)
 
-def trigram_pmi_a(sentences):
-    def pmi_a(unigrams_p, bigrams_p, trigrams_p, trigram):
-        x, y, z = trigram
-        return trigrams_p[trigram] / (unigrams_p[x] * unigrams_p[y] * unigrams_p[z])
-    return trigram_pmi(sentences, pmi_a)
+def pmi_a(unigrams_p, bigrams_p, trigrams_p, trigram):
+    x, y, z = trigram
+    return trigrams_p[trigram] / (unigrams_p[x] * unigrams_p[y] * unigrams_p[z])
 
-def trigram_pmi_b(sentences):
-    def pmi_b(unigrams_p, bigrams_p, trigrams_p, trigram):
-        x, y, z = trigram
-        return trigrams_p[trigram] / (bigrams_p[(x, y)] * bigrams_p[(y, z)])
-    return trigram_pmi(sentences, pmi_b)
+def pmi_b(unigrams_p, bigrams_p, trigrams_p, trigram):
+    x, y, z = trigram
+    return trigrams_p[trigram] / (bigrams_p[(x, y)] * bigrams_p[(y, z)])
 
-def trigram_pmi_c(sentences):
-    def pmi_c(unigrams_p, bigrams_p, trigrams_p, trigram):
-        x, y, z = trigram
-        return trigrams_p[trigram] / (unigrams_p[x] * unigrams_p[y] * bigrams_p[(x, y)] * bigrams_p[(y, z)])
-    return trigram_pmi(sentences, pmi_c)
+def pmi_c(unigrams_p, bigrams_p, trigrams_p, trigram):
+    x, y, z = trigram
+    return trigrams_p[trigram] / (unigrams_p[x] * unigrams_p[y] * bigrams_p[(x, y)] * bigrams_p[(y, z)])
 
 # top: k: Int, Map[A, B Ordered] -> List[(A, B)] Sorted on B, with only top k elements.
 def top(k, scored):
-    return sorted(scored.items(), key=(lambda pair: pair[1]), reverse=True)[:k]
-                                                    # ^ on value
+    return sorted(sorted(scored.items(), key=lambda pair: pair[0]), key = lambda pair: pair[1], reverse=True)[:k]
+# Sort on score (index 1), then by the (bi/tri)gram lexicographically. (index 0)
+# No proper handling of Orders in python, so we can't use the lexicographical ordering imposed by tuples.
+#   (we need to partially reverse the order)
+
+
+###############################################################################################
+########################### Input & Output ####################################################
+###############################################################################################
+
+def file_sentences(file):
+    with codecs.open(file, 'r', 'utf-8') as f:
+        text = f.read()
+
+    return re.sub(r"(\r\n)+|\n+|\xa0|\t", "\n", text).split("\n")
+
+def all_texts():
+    input_folder = 'hw2/datasets/testset/'
+
+    return flatMap(os.listdir(input_folder), file_sentences)
+
+sentences = file_sentences('hw2/datasets/devset/childes-tokenized.txt')
 
 # bigram_pmis: Map[(String, String), Double]
-bigram_pmis = bigram_pmi(sentences)
+bigram_pmis = bigram_pmi_filtered(sentences, 5)
 
 # sorted_frequencies: List[((String, String), Double)]
 sorted_frequencies = top(100, bigram_pmis)
