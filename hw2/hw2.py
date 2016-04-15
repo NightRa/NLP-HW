@@ -169,17 +169,19 @@ def write_to_file(folder, file, body):
         f.write(body)
 
 def output_all_collocations_metrics(sentences, output_folder):
+    min_occurrences = 20
+
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
     raw_frequencies = formatted_raw_frequencies(sentences)
     write_to_file(output_folder, 'freq_raw.txt', format_collocations_metric(raw_frequencies))
-    bigram_pmis = bigram_pmi_filtered(sentences, 20)
+    bigram_pmis = bigram_pmi_filtered(sentences, min_occurrences)
     write_to_file(output_folder, 'pmi_pair.txt', format_collocations_metric(bigram_pmis))
-    trigram_pmis_a = trigram_pmi(sentences, pmi_a, 20)
+    trigram_pmis_a = trigram_pmi(sentences, pmi_a, min_occurrences)
     write_to_file(output_folder, 'pmi_tri_a.txt', format_collocations_metric(trigram_pmis_a))
-    trigram_pmis_b = trigram_pmi(sentences, pmi_b, 20)
+    trigram_pmis_b = trigram_pmi(sentences, pmi_b, min_occurrences)
     write_to_file(output_folder, 'pmi_tri_b.txt', format_collocations_metric(trigram_pmis_b))
-    trigram_pmis_c = trigram_pmi(sentences, pmi_c, 20)
+    trigram_pmis_c = trigram_pmi(sentences, pmi_c, min_occurrences)
     write_to_file(output_folder, 'pmi_tri_c.txt', format_collocations_metric(trigram_pmis_c))
 
 input_folder = sys.argv[1]
