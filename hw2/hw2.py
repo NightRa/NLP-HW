@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+# Authors:
+#   Ilan Godik       - 316315332
+#   Charlie Mubariky - 316278118
+
 import re
 import codecs
 import math
@@ -111,7 +116,7 @@ def pmi_b(unigrams_p, bigrams_p, trigrams_p, trigram):
 
 def pmi_c(unigrams_p, bigrams_p, trigrams_p, trigram):
     x, y, z = trigram
-    return trigrams_p[trigram] / (unigrams_p[x] * unigrams_p[y] * bigrams_p[(x, y)] * bigrams_p[(y, z)])
+    return trigrams_p[trigram] / (unigrams_p[x] * unigrams_p[y] * unigrams_p[z] * bigrams_p[(x, y)] * bigrams_p[(y, z)])
 
 # top: k: Int, Map[A, B Ordered] -> List[(A, B)] Sorted on B, with only top k elements.
 def top(k, scored):
