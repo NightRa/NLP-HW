@@ -15,8 +15,11 @@ def flatMap(list, f):
 def window(list, n):
     return [tuple(list[i:i + n]) for i in range(len(list) - n + 1)]
 
-def map_filter_keys(dict, p):
+def dict_filter_keys(dict, p):
     return {k:v for k,v in dict.items() if p(k)}
+
+def dict_map_values(dict, f):
+    return {k:f(v) for k,v in dict.items()}
 
 # n_grams: (lines: [String]) -> [(w1, w2, ..., wn)]
 def n_grams(sentences, n):
@@ -81,7 +84,7 @@ def bigram_pmi_filtered(sentences, k):
     bigram_pmis = bigram_pmi(sentences)
     bigrams = get_bigrams(sentences)
     bigram_freqs = count_frequencies(bigrams)
-    return map_filter_keys(bigram_pmis, lambda bigram: bigram_freqs[bigram] > k)
+    return dict_filter_keys(bigram_pmis, lambda bigram: bigram_freqs[bigram] > k)
 
 # trigram_pmi: [String], (pmi_f: (unigrams_p, bigrams_p, trigrams_p, trigram) -> double)), k: Int -> Map[Trigram, PMI],
 # s.t. each trigram appears at least @k times in the corpus.
@@ -95,7 +98,7 @@ def trigram_pmi(sentences, pmi_f, k):
     trigrams_f = count_frequencies(trigrams)
     trigram_pmis = {trigram: math.log(pmi_f(unigrams_p, bigrams_p, trigrams_p, trigram), 2)
                         for trigram in trigrams}
-    return map_filter_keys(trigram_pmis, lambda trigram: trigrams_f[trigram] > k)
+    return dict_filter_keys(trigram_pmis, lambda trigram: trigrams_f[trigram] > k)
 
 def pmi_a(unigrams_p, bigrams_p, trigrams_p, trigram):
     x, y, z = trigram
@@ -118,6 +121,35 @@ def top(k, scored):
 
 
 ###############################################################################################
+############################# Formatting ######################################################
+###############################################################################################
+
+# input: List[bigram/trigram], output: longest bigram/trigram when shown with spaces.
+def longest_collocation(collocations):
+    lengths = map(lambda collocation: len(" ".join(collocation)), collocations)
+    return max(lengths)
+
+def pad(str, size):
+    return str + " " * (size - len(str))
+
+# input: Map[Collocation, metric (raw freq, pmi)], output: Tabular string view.
+def format_collocations_metric(collocations, top_size = 100, spaces_between_collocation_and_score = 2):
+    # sorted_frequencies: List[(Collocation, Double)]
+    sorted_frequencies = top(top_size, collocations)
+    max_length = longest_collocation(map(lambda pair: pair[0], sorted_frequencies))
+                                                    # ^ The collocation itself from the top list.
+    def format_collocation(collocation, score):
+        return pad(" ".join(collocation), max_length + spaces_between_collocation_and_score) + "%.3f" % score
+        #                                 ^ to have a space between the collocations and the score.
+    return "\r\n".join(map(lambda collocation_score: format_collocation(*collocation_score), sorted_frequencies))
+
+# normalized_raw_frequencies: [Sentence: String] -> Map[Bigram, Freq * 1000 : Double]
+def formatted_raw_frequencies(sentences):
+    frequencies = raw_frequency(sentences)
+    return dict_map_values(frequencies, lambda freq: freq * 1000)
+
+
+###############################################################################################
 ########################### Input & Output ####################################################
 ###############################################################################################
 
@@ -125,23 +157,31 @@ def file_sentences(file):
     with codecs.open(file, 'r', 'utf-8') as f:
         text = f.read()
 
-    return re.sub(r"(\r\n)+|\n+|\xa0|\t", "\n", text).split("\n")
+    return re.sub(" +", " ", re.sub(r"(\r\n)+|\n+|\xa0|\t", "\n", text)).split("\n")
 
-def all_texts():
-    input_folder = 'hw2/datasets/testset/'
+def all_texts(input_folder):
+    files = map(lambda file: os.path.join(input_folder, file), os.listdir(input_folder))
+    return flatMap(files, file_sentences)
 
-    return flatMap(os.listdir(input_folder), file_sentences)
+def write_to_file(folder, file, body):
+    with codecs.open(os.path.join(folder, file), 'w', 'utf-8') as f:
+        f.write(body)
 
-sentences = file_sentences('hw2/datasets/devset/childes-tokenized.txt')
+def output_all_collocations_metrics(sentences, output_folder):
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+    raw_frequencies = formatted_raw_frequencies(sentences)
+    write_to_file(output_folder, 'freq_raw.txt', format_collocations_metric(raw_frequencies))
+    bigram_pmis = bigram_pmi_filtered(sentences, 20)
+    write_to_file(output_folder, 'pmi_pair.txt', format_collocations_metric(bigram_pmis))
+    trigram_pmis_a = trigram_pmi(sentences, pmi_a, 20)
+    write_to_file(output_folder, 'pmi_tri_a.txt', format_collocations_metric(trigram_pmis_a))
+    trigram_pmis_b = trigram_pmi(sentences, pmi_b, 20)
+    write_to_file(output_folder, 'pmi_tri_b.txt', format_collocations_metric(trigram_pmis_b))
+    trigram_pmis_c = trigram_pmi(sentences, pmi_c, 20)
+    write_to_file(output_folder, 'pmi_tri_c.txt', format_collocations_metric(trigram_pmis_c))
 
-# bigram_pmis: Map[(String, String), Double]
-bigram_pmis = bigram_pmi_filtered(sentences, 5)
-
-# sorted_frequencies: List[((String, String), Double)]
-sorted_frequencies = top(100, bigram_pmis)
-
-for (bigram, pmi) in sorted_frequencies:
-  w1, w2 = bigram
-  print(w1, w2, '=', "%.3f" % (pmi * 1000))
-
-
+input_folder = 'hw2/datasets/testset/'
+# sentences = file_sentences('hw2/datasets/devset/wikipedia-tokenized.txt')
+sentences = all_texts(input_folder)
+output_all_collocations_metrics(sentences, 'out/testset/')
