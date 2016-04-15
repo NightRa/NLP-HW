@@ -182,11 +182,8 @@ def output_all_collocations_metrics(sentences, output_folder):
     trigram_pmis_c = trigram_pmi(sentences, pmi_c, 20)
     write_to_file(output_folder, 'pmi_tri_c.txt', format_collocations_metric(trigram_pmis_c))
 
-# input_folder = 'hw2/datasets/testset/'
-# output_folder = 'out/testset/'
 input_folder = sys.argv[1]
 output_folder = sys.argv[2]
 
-# sentences = file_sentences('hw2/datasets/devset/wikipedia-tokenized.txt')
 sentences = all_texts(input_folder)
 output_all_collocations_metrics(sentences, output_folder)
