@@ -75,7 +75,7 @@ def bigram_pmi(sentences):
     bigrams = get_bigrams(sentences)
     bigram_frequencies = count_probabilities(bigrams, len(bigrams))
     def pmi(pxy, px, py):
-        return math.log(pxy / (px * py), 2)
+        return pxy * math.log(pxy / (px * py), 2)
 
     return {(x, y): pmi(pxy, unigram_frequencies[x], unigram_frequencies[y])
                     for (x, y), pxy in bigram_frequencies.items()}
@@ -83,23 +83,24 @@ def bigram_pmi(sentences):
 # bigram_pmi_filtered: k:Int, [String] -> Map[Bigram, PMI], s.t. each bigram appears at least k times in the corpus.
 def bigram_pmi_filtered(sentences, k):
     bigram_pmis = bigram_pmi(sentences)
-    unigrams = get_unigrams(sentences)
-    unigrams_freq = count_frequencies(unigrams)
-    return dict_filter_keys(bigram_pmis, lambda bigram: all(unigrams_freq[token] >= k for token in bigram))
+    bigrams = get_bigrams(sentences)
+    bigram_freq = count_frequencies(bigrams)
+    return dict_filter_keys(bigram_pmis, lambda bigram: bigram_freq[bigram] >= k)
 
 # trigram_pmi: [String], (pmi_f: (unigrams_p, bigrams_p, trigrams_p, trigram) -> double)), k: Int -> Map[Trigram, PMI],
 # s.t. each trigram appears at least @k times in the corpus.
 def trigram_pmi(sentences, pmi_f, k):
     unigrams = get_unigrams(sentences)
     unigrams_p = count_probabilities(unigrams, len(unigrams))
-    unigrams_f = count_frequencies(unigrams)
+    # unigrams_f = count_frequencies(unigrams)
     bigrams = get_bigrams(sentences)
     bigrams_p = count_probabilities(bigrams, len(bigrams))
     trigrams = get_trigrams(sentences)
     trigrams_p = count_probabilities(trigrams, len(trigrams))
-    trigram_pmis = {trigram: math.log(pmi_f(unigrams_p, bigrams_p, trigrams_p, trigram), 2)
+    trigram_pmis = {trigram: trigrams_p[trigram] * math.log(pmi_f(unigrams_p, bigrams_p, trigrams_p, trigram), 2)
                         for trigram in trigrams}
-    return dict_filter_keys(trigram_pmis, lambda trigram: all(unigrams_f[token] >= k for token in trigram))
+    trigrams_f = count_frequencies(trigrams)
+    return dict_filter_keys(trigram_pmis, lambda trigram: trigrams_f[trigram] >= k)
 
 def pmi_a(unigrams_p, bigrams_p, trigrams_p, trigram):
     x, y, z = trigram
@@ -169,7 +170,7 @@ def write_to_file(folder, file, body):
         f.write(body)
 
 def output_all_collocations_metrics(sentences, output_folder):
-    min_occurrences = 20
+    min_occurrences = 0
 
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
