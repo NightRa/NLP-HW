@@ -83,23 +83,23 @@ def bigram_pmi(sentences):
 # bigram_pmi_filtered: k:Int, [String] -> Map[Bigram, PMI], s.t. each bigram appears at least k times in the corpus.
 def bigram_pmi_filtered(sentences, k):
     bigram_pmis = bigram_pmi(sentences)
-    bigrams = get_bigrams(sentences)
-    bigram_freqs = count_frequencies(bigrams)
-    return dict_filter_keys(bigram_pmis, lambda bigram: bigram_freqs[bigram] > k)
+    unigrams = get_unigrams(sentences)
+    unigrams_freq = count_frequencies(unigrams)
+    return dict_filter_keys(bigram_pmis, lambda bigram: all(unigrams_freq[token] >= k for token in bigram))
 
 # trigram_pmi: [String], (pmi_f: (unigrams_p, bigrams_p, trigrams_p, trigram) -> double)), k: Int -> Map[Trigram, PMI],
 # s.t. each trigram appears at least @k times in the corpus.
 def trigram_pmi(sentences, pmi_f, k):
     unigrams = get_unigrams(sentences)
     unigrams_p = count_probabilities(unigrams, len(unigrams))
+    unigrams_f = count_frequencies(unigrams)
     bigrams = get_bigrams(sentences)
     bigrams_p = count_probabilities(bigrams, len(bigrams))
     trigrams = get_trigrams(sentences)
     trigrams_p = count_probabilities(trigrams, len(trigrams))
-    trigrams_f = count_frequencies(trigrams)
     trigram_pmis = {trigram: math.log(pmi_f(unigrams_p, bigrams_p, trigrams_p, trigram), 2)
                         for trigram in trigrams}
-    return dict_filter_keys(trigram_pmis, lambda trigram: trigrams_f[trigram] > k)
+    return dict_filter_keys(trigram_pmis, lambda trigram: all(unigrams_f[token] >= k for token in trigram))
 
 def pmi_a(unigrams_p, bigrams_p, trigrams_p, trigram):
     x, y, z = trigram
