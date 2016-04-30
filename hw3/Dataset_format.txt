@@ -1,0 +1,4 @@
+Dataset:
+data.data: 2D-Array (sample -> features)
+data.target: Numpy 1D-Array (correct classes)
+data.filenames: Numpy 1D-Array of the filepaths (strings)
