@@ -2,11 +2,14 @@ import os
 import re
 import codecs
 
-from sklearn import cross_validation
+from sklearn.pipeline import Pipeline
+from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer
+from sklearn.feature_selection import SelectKBest
 from sklearn.naive_bayes import MultinomialNB
 from sklearn import svm
 from sklearn import tree
 from sklearn import neighbors
+from sklearn import cross_validation
 import numpy as np
 
 ######################################################################
@@ -58,7 +61,7 @@ def contains(words, keyword):
             return 1
     return 0
 
-def get_feature_model(positives, negatives):
+def get_feature_model1(positives, negatives):
     return read_features()
 
 def calc_feature_vector(feature_model, text):
@@ -80,16 +83,10 @@ def contained_keywords(feature_vector, features):
 ######################################################################
 ###################### Testing #######################################
 ######################################################################
-root_dir = "C:\\Users\\Ilan\\Programming\\University\\NLP-HW\\hw3\\"
-input_dir = os.path.join(root_dir, "imdb1.train\\")
+root_dir = ""
+input_dir = os.path.join(root_dir, "imdb1.train/")
 positives = read_positive_reviews(input_dir)
 negatives = read_negative_reviews(input_dir)
-features = get_feature_model(positives, negatives)
-
-positive_feature_vectors = list(map(lambda text: calc_feature_vector(features, text), positives))
-negative_feature_vectors = list(map(lambda text: calc_feature_vector(features, text), negatives))
-
-data = positive_feature_vectors + negative_feature_vectors
 target = np.array(([1] * 1000) + ([0] * 1000))
 
 # pos_files = list(map(lambda file: os.path.join("imdb1.train/pos", file), os.listdir("imdb1.train/pos")))
@@ -108,23 +105,63 @@ target = np.array(([1] * 1000) + ([0] * 1000))
 ################### Learning #########################################
 ######################################################################
 
-# clf = svm.SVC().fit(data, target)
-clf = MultinomialNB().fit(data, target)
+# clf = svm.SVC() #.fit(data, target)
+# clf = MultinomialNB() #.fit(data, target)
 # clf = tree.DecisionTreeClassifier()
-# clf = neighbors.KNeighborsClassifier()
+clf = neighbors.KNeighborsClassifier()
 
-scores = cross_validation.cross_val_score(clf, data, target, cv=10)
-print("Accuracy: %.2f (+- %.2f)" % (scores.mean(), (scores.std() * 2)))
+# features = get_feature_model1(positives, negatives)
 
+# positive_feature_vectors = list(map(lambda text: calc_feature_vector(features, text), positives))
+# negative_feature_vectors = list(map(lambda text: calc_feature_vector(features, text), negatives))
 
-# best 10 features 1: ['bad', 'best', 'can', 'emotion', 'enjoy', 'great', 'love', 'money', 'thumbs', 'wors']
-# best 10 features 2: ['applauded', 'bad', 'best', 'emotion', 'enjoy', 'great', 'love', 'money', 'thumbs', 'wors']
-# best 10 features for SVM: ['awful', 'bad', 'highly', 'money', 'not', 'nothing', 'tear', 'wors']
-# best 50 features: ['avoid', 'bad', 'beautiful', 'best', 'better', 'brillian', 'cried', 'different', 'forgotten', 'genius', 'great', 'hate', 'horribl', 'insulting', 'intense', 'juicy', 'laugh', 'like', 'love', 'money', 'must', "n't", 'never', 'off', 'over', 'perfect', 'plot', 'pointless', 'positive', 'problem', 'recommend', 'ruin', 'serious', 'should', 'strong', 'stunning', 'stupid', 'tear', 'tedious', 'tense', 'thank', 'unsatisfied', 'very', 'waste', 'well', 'wonderful', 'wors', 'yet']
+# data = positive_feature_vectors + negative_feature_vectors
 
+# scores = cross_validation.cross_val_score(clf, data, target, cv=10)
+# print("Stage 1: Accuracy: %.2f (+- %.2f)" % (scores.mean(), (scores.std() * 2)))
 
-# while True:
-#     bitset = input()
-#     accuracy = calc_accuracy(bitset)
-#     print(accuracy)
+######################################################################
+################### Bag Of Words #####################################
+######################################################################
 
+text_clf2 = Pipeline([('vect', CountVectorizer()),
+                      ('tfidf', TfidfTransformer()),
+                      ('clf', clf),
+                      ])
+
+# scores = cross_validation.cross_val_score(text_clf2, positives + negatives, target, cv=10)
+# print("Stage 2: Accuracy: %.2f (+- %.2f)" % (scores.mean(), (scores.std() * 2)))
+
+######################################################################
+################### SelectKBest ######################################
+######################################################################
+
+kFeatures3 = Pipeline([('vect', CountVectorizer()),
+                       ('tfidf', TfidfTransformer()),
+                       ('kbest', SelectKBest(k=50))
+                       ])
+samples = positives + negatives
+counts = CountVectorizer(stop_words='english').fit(samples, target)
+counted = counts.transform(samples)
+tfidfed = TfidfTransformer().fit_transform(counted, target)
+kbest = SelectKBest(k=50).fit(tfidfed, target)
+kbestSupport = kbest.get_support()
+selectedFeatures = list(map(lambda i: counts.get_feature_names()[i],filter(lambda i: kbestSupport[i], range(len(kbestSupport)))))
+# selectedFeatures = kFeatures3.fit_transform(positives + negatives, target)
+print("Stage 3: ")
+# print(kbest.get_params())
+print(selectedFeatures)
+# print(kbest)
+
+######################################################################
+################# Classify with selected features ####################
+######################################################################
+
+text_clf4 = Pipeline([('vect', CountVectorizer(stop_words='english')),
+                      ('tfidf', TfidfTransformer()),
+                      # ('kbest', SelectKBest(k=50)),
+                      ('clf', clf)
+                      ])
+
+scores = cross_validation.cross_val_score(text_clf4, positives + negatives, target, cv=10)
+print("Stage 4: Accuracy: %.2f (+- %.2f)" % (scores.mean(), (scores.std() * 2)))
