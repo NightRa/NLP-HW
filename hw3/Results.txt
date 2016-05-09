@@ -1,34 +1,40 @@
-  Bag of Words (With Stop-Words)
-=================================
-Naive Bayes: 0.77 (+- 0.15)
-SVM: 0.74 (+- 0.09)
-Decision Tree: 0.68 (+- 0.09)
-KNN: 0.61 (+- 0.13)
+Naive Bayes features:
 
-  After SelectKBest(k=50) (With Stop-Words)
-=============================================
-Naive Bayes: 0.80 (+- 0.06)
-SVM: 0.65 (+- 0.08)
-Decision Tree: 0.68 (+- 0.06)
-KNN: 0.69 (+- 0.08)
+step1 (manually generated features):
 
-  Bag of Words (Without Stop-Words)
-=====================================
-Naive Bayes: 0.79 (+- 0.15)
-SVM: 0.74 (+- 0.14)
-Decision Tree: 0.68 (+- 0.09)
-KNN: 0.64 (+- 0.15)
+- SVM: 0.80 (+- 0.04)
+- Naive Bayes: 0.83 (+- 0.05)
+- DecisionTree: 0.71 (+- 0.04)
+- KNN: 0.68 (+- 0.07)
 
-  After SelectKBest(k=50) (Without Stop-Words)
-================================================
-Naive Bayes: 0.77 (+- 0.08)
-SVM: 0.62 (+- 0.07)
-Decision Tree: 0.68 (+- 0.06)
-KNN: 0.71 (+- 0.08)
+step2 (bag-of-words):
 
-     SelectKBest(k=50) (Without Stop-Words)
-===============================================
-['amazing', 'annoying', 'avoid', 'awful', 'bad', 'badly', 'beautiful', 'best', 'boring', 'brilliant', 'effects', 'excellent', 'great', 'highly', 'hitchcock', 'horrible', 'hour', 'idea', 'just', 'lame', 'life', 'like', 'lives', 'looks', 'love', 'loved', 'make', 'masterpiece', 'minutes', 'money', 'mother', 'perfect', 'performance', 'plot', 'poor', 'poorly', 'portman', 'ridiculous', 'script', 'strong', 'stupid', 'superb', 'terrible', 'thing', 'war', 'waste', 'wasted', 'wonderful', 'worse', 'worst']
+- SVM: 0.79 (+- 0.07)
+- Naive Bayes: 0.90 (+- 0.05)
+- DecisionTree: 0.69 (+- 0.08)
+- KNN: 0.86 (+- 0.06)
 
-Best Features for Naive Bayes by genetic alg:
-['applause', 'avoid', 'bad', 'beautiful', 'best', 'better', 'bother', 'brillian', 'crap', 'cry', 'delightful', 'enjoy', 'entertain', 'even', 'excellen', 'favorite', 'fool', 'genius', 'gorgeous', 'great', 'highly', 'horribl', 'however', 'humorous', 'incredible', 'liar', 'love', 'money', "n't", 'never', 'not', 'perfect', 'performance', 'plot', 'poor', 'rare', 'should', 'strong', 'stupid', 'superb', 'surpris', 'tear', 'tense', 'terrible', 'thank', 'touching', 'waste', 'well-made', 'wonderful', 'wors']
+step4 (selected best features):
+
+- SVM: 0.80 (+- 0.07)
+- Naive Bayes: 0.81 (+- 0.05)
+- DecisionTree: 0.69 (+- 0.05)
+- KNN: 0.76 (+- 0.07)
+
+SVM Features:
+- SVM: 0.81 (+- 0.04)
+- Naive Bayes: 0.82 (+- 0.06)
+- DecisionTree: 0.68 (+- 0.04)
+- KNN: 0.67 (+- 0.07)
+
+All 161 Features: (Baseline)
+- SVM: 0.79 (+- 0.05)
+- Naive Bayes: 0.81 (+- 0.05)
+- DecisionTree: 0.69 (+- 0.06)
+- KNN: 0.67 (+- 0.08)
+
+Decision Tree 15 Features:
+- SVM: 0.75 (+- 0.05)
+- Naive Bayes: 0.75 (+- 0.07)
+- DecisionTree: 0.75 (+- 0.07)
+- KNN: 0.64 (+- 0.07)

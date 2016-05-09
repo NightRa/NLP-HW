@@ -2,6 +2,9 @@ import os
 import re
 import codecs
 
+import sys
+
+from sklearn.cross_validation import StratifiedKFold
 from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer
 from sklearn.feature_selection import SelectKBest
@@ -12,6 +15,7 @@ from sklearn import neighbors
 from sklearn import cross_validation
 import numpy as np
 
+
 ######################################################################
 ################### Reading the dataset ##############################
 ######################################################################
@@ -21,22 +25,32 @@ def read_file(file_path):
     with codecs.open(file_path, 'r', 'utf-8') as f:
         return f.read()
 
+
+# read_file: file path -> IO String
+def write_file(file_path, data):
+    with codecs.open(file_path, 'w', 'utf-8') as f:
+        return f.write(data)
+
+
 # read_reviews: directory path -> IO List[String]
 def read_reviews(reviews_dir):
     files = map(lambda file: os.path.join(reviews_dir, file), os.listdir(reviews_dir))
     # read all files
     return list(map(read_file, files))
 
+
 # read_positive_reviews: directory path -> IO List[String]
 def read_positive_reviews(input_dir):
     return read_reviews(os.path.join(input_dir, 'pos'))
+
 
 # read_negative_reviews: directory path -> IO List[String]
 def read_negative_reviews(input_dir):
     return read_reviews(os.path.join(input_dir, 'neg'))
 
+
 ######################################################################
-################### To words #########################################
+################### Reading the features #############################
 ######################################################################
 
 def to_words(text):
@@ -44,15 +58,13 @@ def to_words(text):
     text = re.sub(r" +", " ", text)
     return text.split(" ")
 
-######################################################################
-################### Reading the features #############################
-######################################################################
 
-def read_features():
-    return to_words(read_file(os.path.join(root_dir, 'root_features.txt')))
+def read_features(file):
+    return to_words(read_file(file))
+
 
 ######################################################################
-################### Feature Vectors ##################################
+################### Feature Vectors for Step 1 #######################
 ######################################################################
 
 def contains(words, keyword):
@@ -61,8 +73,6 @@ def contains(words, keyword):
             return 1
     return 0
 
-def get_feature_model1(positives, negatives):
-    return read_features()
 
 def calc_feature_vector(feature_model, text):
     words = to_words(text)
@@ -70,98 +80,125 @@ def calc_feature_vector(feature_model, text):
     # Our features are roots of words.
     return list(map(lambda keyword: contains(words, keyword), feature_model))
 
-def prettify_feature_vector(feature_vector, features):
-    return zip(features, feature_vector)
-
-def contained_keywords(feature_vector, features):
-    list = []
-    for keyword, contained in zip(features, feature_vector):
-        if contained:
-            list.append(keyword)
-    return list
 
 ######################################################################
-###################### Testing #######################################
+##################### Read The Data ##################################
 ######################################################################
-root_dir = ""
-input_dir = os.path.join(root_dir, "imdb1.train/")
+
+input_dir = sys.argv[1]
+words_file_input_path = sys.argv[2]
+best_words_file_output_path = sys.argv[3]
 positives = read_positive_reviews(input_dir)
 negatives = read_negative_reviews(input_dir)
-target = np.array(([1] * 1000) + ([0] * 1000))
+texts = positives + negatives
+target = np.array(([1] * len(positives)) + ([0] * len(negatives)))
 
-# pos_files = list(map(lambda file: os.path.join("imdb1.train/pos", file), os.listdir("imdb1.train/pos")))
-
-# test_index = 660
-# feature_vector = calc_feature_vector(features, positives[test_index])
-# pretty_feature_vector = prettify_feature_vector(feature_vector, features)
-# keywords = contained_keywords(feature_vector, features)
-
-# print(pos_files[test_index])
-# print(positives[test_index])
-# for keyword in keywords:
-#     print(keyword)
 
 ######################################################################
 ################### Learning #########################################
 ######################################################################
 
-# clf = svm.SVC() #.fit(data, target)
-# clf = MultinomialNB() #.fit(data, target)
-# clf = tree.DecisionTreeClassifier()
-clf = neighbors.KNeighborsClassifier()
+def evaluateClassifier(data, target, clf, name):
+    scores = cross_validation.cross_val_score(clf, data, target, cv=StratifiedKFold(target, 10, shuffle=True))
+    print("- %s: %.2f (+- %.2f)" % (name, scores.mean(), (scores.std() * 2)))
 
-# features = get_feature_model1(positives, negatives)
 
-# positive_feature_vectors = list(map(lambda text: calc_feature_vector(features, text), positives))
-# negative_feature_vectors = list(map(lambda text: calc_feature_vector(features, text), negatives))
+# Evaluate the features with the classifier transformer clfF
+def evaluateF(data, target, clfF):
+    print()
+    evaluateClassifier(data, target, clfF(svm.SVC()), "SVM")
+    evaluateClassifier(data, target, clfF(MultinomialNB()), "Naive Bayes")
+    evaluateClassifier(data, target, clfF(tree.DecisionTreeClassifier()), "DecisionTree")
+    evaluateClassifier(data, target, clfF(neighbors.KNeighborsClassifier()), "KNN")
+    print()
 
-# data = positive_feature_vectors + negative_feature_vectors
 
-# scores = cross_validation.cross_val_score(clf, data, target, cv=10)
-# print("Stage 1: Accuracy: %.2f (+- %.2f)" % (scores.mean(), (scores.std() * 2)))
+def evaluate(data, target):
+    evaluateF(data, target, lambda clf: clf)
+
+
+def evaluateFeatures(features):
+    positive_feature_vectors = list(map(lambda text: calc_feature_vector(features, text), positives))
+    negative_feature_vectors = list(map(lambda text: calc_feature_vector(features, text), negatives))
+
+    data = positive_feature_vectors + negative_feature_vectors
+
+    evaluate(data, target)
+
 
 ######################################################################
-################### Bag Of Words #####################################
+################### Manually Selected Features #######################
 ######################################################################
 
-text_clf2 = Pipeline([('vect', CountVectorizer()),
-                      ('tfidf', TfidfTransformer()),
-                      ('clf', clf),
-                      ])
 
-# scores = cross_validation.cross_val_score(text_clf2, positives + negatives, target, cv=10)
-# print("Stage 2: Accuracy: %.2f (+- %.2f)" % (scores.mean(), (scores.std() * 2)))
+def step1():
+    print("step1 (manually generated features):")
+    features = read_features(words_file_input_path)
+    evaluateFeatures(features)
+
 
 ######################################################################
-################### SelectKBest ######################################
+###################### Bag Of Words ##################################
 ######################################################################
 
-kFeatures3 = Pipeline([('vect', CountVectorizer()),
-                       ('tfidf', TfidfTransformer()),
-                       ('kbest', SelectKBest(k=50))
-                       ])
-samples = positives + negatives
-counts = CountVectorizer(stop_words='english').fit(samples, target)
-counted = counts.transform(samples)
-tfidfed = TfidfTransformer().fit_transform(counted, target)
-kbest = SelectKBest(k=50).fit(tfidfed, target)
-kbestSupport = kbest.get_support()
-selectedFeatures = list(map(lambda i: counts.get_feature_names()[i],filter(lambda i: kbestSupport[i], range(len(kbestSupport)))))
-# selectedFeatures = kFeatures3.fit_transform(positives + negatives, target)
-print("Stage 3: ")
-# print(kbest.get_params())
-print(selectedFeatures)
-# print(kbest)
+def step2():
+    def text_clf(clf):
+        return Pipeline([('vect', CountVectorizer(stop_words='english')),
+                         ('tfidf', TfidfTransformer()),
+                         ('clf', clf),
+                         ])
+
+    print("step2 (bag-of-words):")
+    evaluateF(texts, target, text_clf)
+    # The amount of distincts words in the Bag of Words = 22878
+    # print(len(CountVectorizer(stop_words='english').fit(texts).get_feature_names()))
+
+
+######################################################################
+####################### SelectKBest ##################################
+######################################################################
+
+def selectKBestFeatures():
+    counts = CountVectorizer(stop_words='english').fit(texts, target)
+    counted = counts.transform(texts)
+    tfidfed = TfidfTransformer().fit_transform(counted, target)
+    k_best = SelectKBest(k=50).fit(tfidfed, target)
+    k_best_support = k_best.get_support()
+    # Take all the indices which were chosen, and map them back to the feature names - the words.
+    selected_features = list(
+        map(lambda i: counts.get_feature_names()[i],
+            filter(lambda i: k_best_support[i],
+                   range(len(k_best_support)))))
+
+    return selected_features
+
+
+def step3():
+    k_best_features = selectKBestFeatures()
+    write_file(best_words_file_output_path, "\r\n".join(k_best_features))
+    return k_best_features
+
 
 ######################################################################
 ################# Classify with selected features ####################
 ######################################################################
 
-text_clf4 = Pipeline([('vect', CountVectorizer(stop_words='english')),
-                      ('tfidf', TfidfTransformer()),
-                      # ('kbest', SelectKBest(k=50)),
-                      ('clf', clf)
-                      ])
+def step4(best_k_features):
+    def text_clf(clf):
+        return Pipeline([('vect', CountVectorizer(stop_words='english', vocabulary=best_k_features)),
+                         ('tfidf', TfidfTransformer()),
+                         ('clf', clf),
+                         ])
 
-scores = cross_validation.cross_val_score(text_clf4, positives + negatives, target, cv=10)
-print("Stage 4: Accuracy: %.2f (+- %.2f)" % (scores.mean(), (scores.std() * 2)))
+    print("step4 (selected best features):")
+    evaluateF(texts, target, text_clf)
+
+
+######################################################################
+###################### Run Everything ################################
+######################################################################
+
+step1()
+step2()
+k_best_features = step3()
+step4(k_best_features)
