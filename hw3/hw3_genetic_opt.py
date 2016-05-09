@@ -52,7 +52,7 @@ def to_words(text):
 ######################################################################
 
 def read_features():
-    return to_words(read_file(os.path.join(root_dir, 'root_features.txt')))
+    return to_words(read_file(os.path.join(root_dir, 'all_root_features.txt')))
 
 
 ######################################################################
@@ -92,8 +92,10 @@ def contained_keywords(feature_vector, features):
 ######################################################################
 ###################### Testing #######################################
 ######################################################################
-clf = svm.SVC()
+# clf = svm.SVC()
 # clf = MultinomialNB()
+# clf = tree.DecisionTreeClassifier()
+clf = neighbors.KNeighborsClassifier()
 
 def features_subset(feature_vector, bitset):
     new_vector = []
