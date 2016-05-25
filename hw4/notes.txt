@@ -1,0 +1,115 @@
+Example:
+- ID: String
+- Sense: String (enum)
+- Context: [String]
+
+Corpus:
+- examples: [Example]
+
+Results 1:
+==========
+cord: precision: 0.558, recall 0.558
+division: precision: 0.420, recall 0.420
+formation: precision: 0.407, recall 0.407
+phone: precision: 0.405, recall 0.405
+product: precision: 0.347, recall 0.347
+total accuracy: 0.748
+
+Results 2:
+==========
+cord: precision: 0.641, recall 0.641
+division: precision: 0.488, recall 0.488
+formation: precision: 0.420, recall 0.420
+phone: precision: 0.407, recall 0.407
+product: precision: 0.407, recall 0.407
+total accuracy: 0.780
+
+
+Sci-kit testing:
+================
+
+With Sci-kit,  10-fold validation:
+- SVM: 0.59 (+- 0.00)
+- Naive Bayes: 0.62 (+- 0.01)
+- DecisionTree: 0.74 (+- 0.06)
+- KNN: 0.80 (+- 0.03)
+
+With Sci-kit, 75-fold validation (test = 50):
+- SVM: 0.59 (+- 0.02)
+- Naive Bayes: 0.63 (+- 0.05)
+- DecisionTree: 0.74 (+- 0.11)
+- KNN: 0.82 (+- 0.09)
+
+Construction:
+=============
+etree.Element(tagName: String, <attribute>=String)
+etree.SubElement(root, tagName: String)
+
+Pretty Printing:
+================
+etree.tostring(root, pretty_print=True, encoding="UTF-8") // Default encoding is ASCII, returns bytestring
+etree.tostring(root, pretty_print=True, encoding='unicode') // Returns python unicode string
+etree.tostring(elem, with_tail=False)
+etree.tostring(root, method="text") // All text appended, no spaces between seperated text
+
+bytesting.decode("utf-8") // bytestring -> string
+
+List-like:
+==========
+root.append(element)
+root[0]
+root.iter() // Iterator of all nodes in appearence order - includes root, children, their children etc.
+               Probably pre-order.
+               Probably not what you want.
+root.iter(tag1, tag2) // Filter to only the provided tags
+list(root) // list of all children
+
+Attributes:
+===========
+root.get(attribute: String) // can return None
+root.set(attribute: String, value: String)
+root.items() // returns the attribute list
+root.attrib // Attributes dictionary
+
+Content:
+========
+elem.tag
+root.text // all text in the node
+elem.tail // text from the end of this node textually until the end of the parent
+
+XPath:
+======
+root.xpath("string()") == etree.tostring(root, method="text")
+root.xpath("//text()") == ['TEXT', 'TAIL'] // seperated to a list
+
+Parsing:
+========
+Returns ElementTree, representing the root of the document.
+
+root = etree.fromstring(xml: String) // Returns Element
+tree = etree.parse(file_object) // Returns ElementTree, need to call getroot(), can get filename: String as input.
+
+parser = etree.XMLParser(remove_blank_text=True)
+
+The E-Factory:
+==============
+from lxml.builder import E
+
+def CLASS(*args): # class is a reserved word in Python
+    return {"class":' '.join(args)}
+
+html = page = (
+  E.html(       # create an Element called "html"
+    E.head(
+      E.title("This is a sample document")
+    ),
+    E.body(
+      E.h1("Hello!", CLASS("title")),
+      E.p("This is a paragraph with ", E.b("bold"), " text in it!"),
+      E.p("This is another paragraph, with a", "\n      ",
+        E.a("link", href="http://www.python.org"), "."),
+      E.p("Here are some reservered characters: <spam&egg>."),
+      etree.XML("<p>And finally an embedded XHTML fragment.</p>"),
+    )
+  )
+)
