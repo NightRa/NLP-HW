@@ -1,11 +1,10 @@
 from lxml import etree
 from lxml.builder import E
-from random import shuffle
 import codecs
 import sys
-import os
 import nltk
-import math
+from math import log
+
 
 class Example:
     # id: String
@@ -41,20 +40,6 @@ class Example:
 
         return Example(id, sense, sentences)
 
-    def __str__(self):
-        return '\n' + self.id + '\n\t' + '\n\t'.join(self.sentences)
-
-    def __repr__(self):
-        return str(self)
-
-    def __eq__(self, other):
-        return (isinstance(other, self.__class__)
-                and self.__dict__ == other.__dict__)
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-
 class Corpus:
     # examples: [Example]
     # item: String (line-n)
@@ -64,13 +49,6 @@ class Corpus:
         self.examples = examples
         self.lang = lang
         self.item = item
-
-    def examples_by_type(self):
-        return group_by(lambda example: example.sense, self.examples)
-
-    def token_occurrences_by_sense(self):
-        return dict_map_values(lambda examples: bag(flatMap(lambda example: example.tokens(), examples)),
-                               self.examples_by_type())
 
     def to_xml(self):
         examples = map(Example.to_xml, self.examples)
@@ -97,13 +75,6 @@ class Corpus:
         out = etree.tostring(xml, pretty_print=True, encoding='unicode')
         return out
 
-    def __eq__(self, other):
-        return (isinstance(other, self.__class__)
-                and self.__dict__ == other.__dict__)
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
 
 ##############################################################################
 ####################### Helper Functions #####################################
@@ -121,9 +92,11 @@ def group_by(f, l):
             out[key].append(e)
     return out
 
+
 # Count the number of occurrences of each element, return as a dictionary {element -> #occurrences}
 def bag(l):
-    return dict_map_values(lambda occurrences: len(occurrences), group_by(identity, l))
+    return dict_map_values(len, group_by(identity, l))
+
 
 # How many elements in @l satisfy @p?
 def count(l, p):
@@ -133,8 +106,10 @@ def count(l, p):
             count += 1
     return count
 
+
 def identity(x):
     return x
+
 
 # flatMap: [a], (a -> [b]) -> [b]
 def flatMap(f, list):
@@ -143,56 +118,76 @@ def flatMap(f, list):
         list_out.extend(f(e))
     return list_out
 
-# [[A]] -> [A]
-def flatten(l):
-    return [item for sublist in l for item in sublist]
-
 def dict_map_values(f, dict):
-    return {k:f(v) for k,v in dict.items()}
-
-# read_file: file path -> IO String
-def write_file(file_path, data):
-    with codecs.open(file_path, 'w', 'utf-8') as f:
-        return f.write(data)
-
+    return {k: f(v) for k, v in dict.items()}
 
 
 ##############################################################################
 ######################### Naive Bayes ########################################
 ##############################################################################
 
-def prior(sense, corpus, examples_by_type):
-    csk = len(examples_by_type[sense])
-    cw = len(corpus.examples)
-    return csk / cw
+class NaiveBayes:
+    # senses: [Sense]
+    # Num train examples: Int
+    # num_examples_for_sense: Map[Sense -> Int] // examples_by_type
+    # token_occurrences_by_sense: Map[Sense, Token -> Int]
+    # sense_num_tokens: Map[Sense -> Int]
+    def __init__(self, senses, num_train_examples, num_examples_for_sense,
+                 token_occurrences_by_sense, sense_num_tokens):
 
-# contexts_tokens_by_sense: Map[Sense -> Map[Word -> #Occurences]]
-def posterior(word, sense, token_occurrences_by_sense, sense_num_tokens):
-    cvsk = 0 if word not in token_occurrences_by_sense[sense] else token_occurrences_by_sense[sense][word]
-    csk_total_words = sense_num_tokens[sense]
+        self.num_train_examples = num_train_examples
+        self.num_examples_for_sense = num_examples_for_sense
+        self.token_occurrences_by_sense = token_occurrences_by_sense
+        self.sense_num_tokens = sense_num_tokens
+        self.senses = senses
 
-    # Do Add-one smoothing
-    vocabulary_size = len(token_occurrences_by_sense[sense])
-    return (cvsk + 1) / (csk_total_words + vocabulary_size)
+    @staticmethod
+    def train(examples):
+        num_train_examples = len(examples)
+        examples_by_sense = group_by(lambda example: example.sense, examples)
+        num_examples_for_sense = dict_map_values(len, examples_by_sense)
 
-def score(sense, example, train_corpus, examples_by_type, token_occurrences_by_sense, sense_num_tokens):
-    tokens = example.tokens()
-    return math.log(prior(sense, train_corpus, examples_by_type)) + \
-           sum(map(lambda word: math.log(posterior(word, sense, token_occurrences_by_sense, sense_num_tokens)), tokens))
+        token_occurrences_by_sense = dict_map_values(
+            lambda examples: bag(flatMap(lambda example: example.tokens(), examples)),
+            examples_by_sense)
 
-def classify(example, train_corpus, examples_by_type, token_occurrences_by_sense, sense_num_tokens):
-    senses = token_occurrences_by_sense.keys()
-    return max(senses, key=lambda sense: score(sense, example, train_corpus, examples_by_type, token_occurrences_by_sense, sense_num_tokens))
+        senses = token_occurrences_by_sense.keys()
 
-def classify_test_corpus(train_corpus, test_corpus):
-    examples_by_type = train_corpus.examples_by_type()
-    token_occurrences_by_sense = train_corpus.token_occurrences_by_sense()
-    senses = token_occurrences_by_sense.keys()
-    sense_num_tokens = dict(map(lambda sense: (sense, sum(token_occurrences_by_sense[sense].values())), senses))
-    # [Example -> Sense]
-    classifications = list(map(lambda example: (example, classify(example, train_corpus, examples_by_type, token_occurrences_by_sense, sense_num_tokens)),
-                               test_corpus.examples))
-    return classifications
+        sense_num_tokens = dict(map(lambda sense: (sense, sum(token_occurrences_by_sense[sense].values())), senses))
+        return NaiveBayes(senses, num_train_examples, num_examples_for_sense,
+                          token_occurrences_by_sense, sense_num_tokens)
+
+    def score(self, sense, example):
+        tokens = example.tokens()
+        return log(self.prior(sense)) + \
+               sum(map(lambda word:
+                       log(self.posterior(word, sense)),
+                       tokens))
+
+    def classify(self, example):
+        return max(self.senses,
+                   key=lambda sense: self.score(sense, example))
+
+    def prior(self, sense):
+        csk = self.num_examples_for_sense[sense]
+        cw = self.num_train_examples
+        return csk / cw
+
+    # contexts_tokens_by_sense: Map[Sense -> Map[Word -> #Occurences]]
+    def posterior(self, word, sense):
+        cvsk = 0 if word not in self.token_occurrences_by_sense[sense] else self.token_occurrences_by_sense[sense][word]
+        csk_total_words = self.sense_num_tokens[sense]
+
+        # Do Add-one smoothing
+        vocabulary_size = len(self.token_occurrences_by_sense[sense])
+        return (cvsk + 1) / (csk_total_words + vocabulary_size)
+
+    def classify_test_corpus(self, test_corpus):
+        # [Example -> Sense]
+        classifications = list(map(lambda example: (example, self.classify(example)),
+                                   test_corpus.examples))
+        return classifications
+
 
 ##############################################################################
 ######################### Evaluation #########################################
@@ -205,12 +200,14 @@ def true_positives(classifications, sense):
 
     return count(classifications, lambda classification: is_true_positive(*classification))
 
+
 # (0,1)
 def false_positives(classifications, sense):
     def is_false_positive(example, chosen_sense):
         return example.sense != sense and chosen_sense == sense
 
     return count(classifications, lambda classification: is_false_positive(*classification))
+
 
 # (1,0)
 def false_negatives(classifications, sense):
@@ -219,15 +216,18 @@ def false_negatives(classifications, sense):
 
     return count(classifications, lambda classification: is_false_negative(*classification))
 
+
 def calc_precision(classifications, sense):
     tp = true_positives(classifications, sense)
     fp = false_positives(classifications, sense)
     return tp / (tp + fp)
 
+
 def calc_recall(classifications, sense):
     tp = true_positives(classifications, sense)
     fn = false_negatives(classifications, sense)
     return tp / (tp + fn)
+
 
 def calc_total_accuracy(classifications):
     def is_true_positive(example, chosen_sense):
@@ -236,6 +236,7 @@ def calc_total_accuracy(classifications):
     correct = count(classifications, lambda classification: is_true_positive(*classification))
     total = len(classifications)
     return correct / total
+
 
 ##############################################################################
 ################################ Main ########################################
@@ -249,10 +250,10 @@ def main():
     train_corpus = Corpus.from_file(train_file)
     test_corpus = Corpus.from_file(test_file)
 
-    classifications = classify_test_corpus(train_corpus, test_corpus)
-    senses = train_corpus.examples_by_type().keys()
+    clf = NaiveBayes.train(train_corpus.examples)
+    classifications = clf.classify_test_corpus(test_corpus)
 
-    for sense in sorted(senses):
+    for sense in sorted(clf.senses):
         precision = calc_precision(classifications, sense)
         recall = calc_recall(classifications, sense)
         print("%s: precision: %.3f, recall %.3f" % (sense, precision, recall))
