@@ -93,9 +93,9 @@ def contained_keywords(feature_vector, features):
 ###################### Testing #######################################
 ######################################################################
 # clf = svm.SVC()
-# clf = MultinomialNB()
+clf = MultinomialNB()
 # clf = tree.DecisionTreeClassifier()
-clf = neighbors.KNeighborsClassifier()
+# clf = neighbors.KNeighborsClassifier()
 
 def features_subset(feature_vector, bitset):
     new_vector = []
